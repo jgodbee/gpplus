@@ -5,14 +5,14 @@ Author URI: http://www.galleryproplus.com
 Plugin URI: http://www.galleryproplus.com
 Tags: gallery, images, photos
 Requires at least: 3.5
-Tested up to: 4.3
+Tested up to: 4.7.3
 Stable tag: 1.0.0
 Version: 1.0.0
 
 Create beautiful photo galleries.
 
 == Copyright ==
-Copyright 2015 Gallery Pro Plus
+Copyright 2015-2017 Gallery Pro Plus
 
 This software is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of

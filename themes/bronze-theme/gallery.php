@@ -24,7 +24,7 @@ $theme_path		// String path to theme selected in gallery; used in header include
 <div class="cycle-slideshow" data-cycle-loader="wait" data-cycle-fx="fadeout" data-cycle-pause-on-hover="true">
 	<?php for ($i = 0, $iC = count($images); $i < $iC; $i++) { ?>
 		<!--<a href="<?php echo wp_get_attachment_url($images[$i]) ?>"></a>-->
-		<?php echo wp_get_attachment_image($images[$i], 'large', false, array('title'=>GalleryProPlus::getImageProperty($images[$i], 'filename-without-extension'))) ?>
+		<?php echo wp_get_attachment_image($images[$i], 'large', false, array('title'=>GalleryProPlusHelper::getImageProperty($images[$i], 'filename-without-extension'))) ?>
 	<?php } ?>
 	<div id="progress"></div>
 </div>

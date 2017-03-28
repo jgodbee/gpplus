@@ -11,5 +11,5 @@
 	</form>
 </div>
 <!--
-<pre><?php print_r(GalleryProPlus::getDebug()) ?></pre>
+<pre><?php print_r(GalleryProPlusHelper::getDebug()) ?></pre>
 -->
