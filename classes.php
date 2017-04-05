@@ -168,9 +168,19 @@ class GalleryProPlusHelper
 	public static function getTheme($gallery_id, $return_friendly=false)
 	{
 		$themes = self::getThemes();
-		$option = get_post_meta($gallery_id, 'theme', true);
+		$option = get_post_field('theme', $gallery_id);
 		$theme = (array_key_exists($option, $themes)) ? $option : array_shift(array_keys($themes));
 		return ($return_friendly) ? $themes[$theme] : $theme;
+	}
+	
+	public static function getThemeSysPath($gallery)
+	{
+		return GALLERYPROPLUS_DIR . '/themes/' . self::getTheme($gallery->ID);
+	}
+	
+	public static function getThemeWebPath($gallery)
+	{
+		return GALLERYPROPLUS_URL . '/themes/' . self::getTheme($gallery->ID);
 	}
 	
 	public static function getThemes()
@@ -209,12 +219,12 @@ class GalleryProPlusHelper
 	
 	public static function isBrowsable($gallery_id)
 	{
-		$exp = get_post_meta($gallery_id, 'expiration_date', true);
+		$exp = get_post_field('expiration_date', $gallery_id);
 		$exp = (!empty($exp)) ? strtotime($exp) : null;
 		
 		$now = time();
 		
-		$pub = get_post_meta($gallery_id, 'publication_date', true);
+		$pub = get_post_field('publication_date', $gallery_id);
 		$pub = (!empty($pub)) ? strtotime($pub) : null;
 		
 		if (!is_null($pub) && $now < $pub)
@@ -321,26 +331,26 @@ class GalleryProPlusHelper
 	
 	public static function showAccessWarning($gallery)
 	{
-		$exp = get_post_meta($gallery->ID, 'expiration_date', true);
+		$exp = get_post_field('expiration_date', $gallery->ID);
 		$exp = (!empty($exp)) ? strtotime($exp) : null;
 		
 		$now = time();
 		
-		$pub = get_post_meta($gallery->ID, 'publication_date', true);
+		$pub = get_post_field('publication_date', $gallery->ID);
 		$pub = (!empty($pub)) ? strtotime($pub) : null;
 		
-		$theme_path = self::getTheme($gallery->ID);
+		$theme_path = self::getThemeWebPath($gallery);
 		
-		require(GALLERYPROPLUS_DIR . '/themes/' . $theme_path . '/access-warning.php');
+		require(self::getThemeSysPath($gallery) . '/access-warning.php');
 	}
 	
 	public static function showGallery($gallery)
 	{
-		$html_head = get_post_meta($gallery->ID, 'html_head', true);
-		$body_header = get_post_meta($gallery->ID, 'body_header', true);
-		$body_footer = get_post_meta($gallery->ID, 'body_footer', true);
+		$html_head = get_post_field('html_head', $gallery->ID);
+		$body_header = get_post_field('body_header', $gallery->ID);
+		$body_footer = get_post_field('body_footer', $gallery->ID);
 		
-		$audio_id = get_post_meta($gallery->ID, 'music', true);
+		$audio_id = get_post_field('music', $gallery->ID);
 		if (!empty($audio_id))
 		{
 			$audio_meta = wp_get_attachment_metadata($audio_id);
@@ -350,19 +360,21 @@ class GalleryProPlusHelper
 			}
 		}
 		
-		$images = get_post_meta($gallery->ID, 'images', true);
+		$header_background_color = get_post_field('header_background_color', $gallery->ID);
+		$header_font_color = get_post_field('header_font_color', $gallery->ID);
+
+		$images = get_post_field('images', $gallery->ID);
 		
-		$logo_id = get_post_meta($gallery->ID, 'logo', true); 
-		if (!empty($logo_id))
-		{
-			$logo_path = wp_get_attachment_url($logo_id);
-		}
+		$logo_id = get_post_field('logo', $gallery->ID);
+		$logo_path = (!empty($logo_id)) ? wp_get_attachment_url($logo_id) : '';
 		
-		$theme_path = self::getTheme($gallery->ID);
+		$page_background_color = get_post_field('page_background_color', $gallery->ID);
+		
+		$theme_path = self::getThemeWebPath($gallery);
+		
+		require(self::getThemeSysPath($gallery) . '/gallery.php');
 		
 		self::trackView($gallery->ID);
-		
-		require(GALLERYPROPLUS_DIR . '/themes/' . $theme_path . '/gallery.php');
 	}
 	
 	public static function showPageNotFound()
@@ -374,8 +386,8 @@ class GalleryProPlusHelper
 	
 	public static function showPasswordForm($gallery)
 	{
-		$theme_path = self::getTheme($gallery->ID);
-		require(GALLERYPROPLUS_DIR . '/themes/' . $theme_path . '/password-form.php');
+		$theme_path = self::getThemeWebPath($gallery);
+		require(self::getThemeSysPath($gallery) . '/password-form.php');
 	}
 	
 	public static function startsWith($haystack, $needle)
@@ -390,7 +402,7 @@ class GalleryProPlusHelper
 			$cookie_name = 'wp_plugin_galleryproplus_trackview_' . $gallery_id;
 			if (!isset($_COOKIE[$cookie_name]))
 			{
-				$views = get_post_meta($gallery_id, 'views', true);
+				$views = get_post_field('views', $gallery_id);
 				if (empty($views))
 				{
 					$views = 0;
@@ -469,6 +481,16 @@ class GalleryProPlus
 			PRIMARY KEY(`requestId`),
 			KEY(`requestDate`)
 		) ENGINE=MyISAM;');
+	}
+	
+	public function admin_enqueue_scripts($hook)
+	{
+		if ($hook == 'galleryproplus_page_settings')
+		{
+			wp_enqueue_media();
+			wp_enqueue_script('galleryproplus_page_settings', GALLERYPROPLUS_URL.'/scripts/page_settings.js', array('wp-color-picker'), false, true);
+			wp_enqueue_style('wp-color-picker');
+		}
 	}
 	
 	/*
@@ -589,7 +611,7 @@ class GalleryProPlus
 			
 			case 'publication_date':
 			case 'expiration_date':
-				$value = get_post_meta($post_id, $column, true);
+				$value = get_post_field($column, $post_id);
 				echo (empty($value)) ? '-' : $value;
 				break;
 			
@@ -603,18 +625,26 @@ class GalleryProPlus
 					echo 'Unavailable';
 					return;
 				}
-				$path = get_site_url().GalleryProPlusHelper::getBasePath().'/'.get_post_field('post_name', $post_id); ?>
-				<a href="#TB_inline?width=300&height=100&inlineId=gallery-url-<?php echo $post_id ?>" class="thickbox"><img src="https://cdn0.iconfinder.com/data/icons/feather/96/591256-link-16.png" alt="" /></a>
-				&nbsp;
-				<a href="<?php echo $path ?>" target="_blank"><img src="https://cdn0.iconfinder.com/data/icons/octicons/1024/link-external-16.png" alt="" /></a>
-				<div id="gallery-url-<?php echo $post_id ?>" style="display:none;">
-					<p><strong>Click to select your Gallery Pro Plus URL:</strong></p>
-					<input type="text" onclick="this.select()" style="width:500px;" value="<?php echo htmlspecialchars($path) ?>" />
-				</div>
-				<?php break;
+				else
+				{
+					$path = get_site_url().GalleryProPlusHelper::getBasePath().'/'.get_post_field('post_name', $post_id);
+					/*
+					<a href="#TB_inline?width=300&height=100&inlineId=gallery-url-<?php echo $post_id ?>" class="thickbox"><img src="https://cdn0.iconfinder.com/data/icons/feather/96/591256-link-16.png" alt="" /></a>
+					&nbsp;
+					*/
+					?>
+					<a href="<?php echo $path ?>" target="_blank"><img src="https://cdn0.iconfinder.com/data/icons/octicons/1024/link-external-16.png" alt="" /></a>
+					<?php /*
+					<div id="gallery-url-<?php echo $post_id ?>" style="display:none;">
+						<p><strong>Click to select your Gallery Pro Plus URL:</strong></p>
+						<input type="text" onclick="this.select()" style="width:500px;" value="<?php echo htmlspecialchars($path) ?>" />
+					</div>
+					<?php */
+				}
+				break;
 				
 			case 'views':
-				$value = get_post_meta($post_id, $column, true);
+				$value = get_post_field($column, $post_id);
 				echo (empty($value)) ? 0 : $value;
 				break;
 		}
@@ -717,17 +747,8 @@ class GalleryProPlus
 		
 		register_field_group(array (
 			'id' => 'acf_gallery-pro-plus-custom-fields',
-			'title' => 'Gallery Pro Plus: Custom Fields',
+			'title' => 'General Settings',
 			'fields' => array (
-				array (
-					'key' => 'field_55f23ba5273ec',
-					'label' => 'Logo',
-					'name' => 'logo',
-					'type' => 'image',
-					'save_format' => 'id',
-					'preview_size' => 'thumbnail',
-					'library' => 'uploadedTo',
-				),
 				array (
 					'key' => 'field_55f23a3775b08',
 					'label' => 'Images',
@@ -736,6 +757,16 @@ class GalleryProPlus
 					'required' => 1,
 					'preview_size' => 'thumbnail',
 					'library' => 'uploadedTo',
+				),
+				array (
+					'key' => 'field_55f23ba5273ec',
+					'label' => 'Logo',
+					'name' => 'logo',
+					'type' => 'image',
+					'save_format' => 'id',
+					'preview_size' => 'thumbnail',
+					'library' => 'uploadedTo',
+					'default_value' => $settings['default_logo_image'],
 				),
 				array (
 					'key' => 'field_55f2413f73ade',
@@ -762,6 +793,36 @@ class GalleryProPlus
 					'default_value' => GalleryProPlusHelper::getDefaultTheme(),
 					'allow_null' => 0,
 					'multiple' => 0,
+				),
+				array (
+					'key' => 'field_65f2413f73ade',
+					'label' => 'Colors',
+					'name' => '',
+					'type' => 'tab',
+				),
+				array (
+					'key' => 'field_58e45e248d20b',
+					'label' => 'Page Background Color',
+					'name' => 'page_background_color',
+					'type' => 'color_picker',
+					'required' => 1,
+					'default_value' => $settings['default_page_background_color'],
+				),
+				array (
+					'key' => 'field_58e45e248d20c',
+					'label' => 'Header Background Color',
+					'name' => 'header_background_color',
+					'type' => 'color_picker',
+					'required' => 1,
+					'default_value' => $settings['default_header_background_color'],
+				),
+				array (
+					'key' => 'field_58e45e248d20d',
+					'label' => 'Header Font Color',
+					'name' => 'header_font_color',
+					'type' => 'color_picker',
+					'required' => 1,
+					'default_value' => $settings['default_header_font_color'],
 				),
 				array (
 					'key' => 'field_55f2413f7ccde',
@@ -890,7 +951,7 @@ class GalleryProPlus
 			),
 			'options' => array (
 				'position' => 'normal',
-				'layout' => 'no_box',
+				'layout' => 'default', // no_box
 				'hide_on_screen' => array (
 				),
 			),
@@ -921,16 +982,48 @@ class GalleryProPlus
 		);
 		
 		add_settings_field(
-			'default_theme',
-			'Default Theme',
-			array($this, 'settings_field_default_theme_render'),
+			'default_header_background_color',
+			'Header Background Color',
+			array($this, 'settings_field_default_header_background_color_render'),
+			'settings',
+			'galleryproplus_settings_section'
+		);
+		
+		add_settings_field(
+			'default_header_font_color',
+			'Header Font Color',
+			array($this, 'settings_field_default_header_font_color_render'),
+			'settings',
+			'galleryproplus_settings_section'
+		);
+		
+		add_settings_field(
+			'default_logo_image',
+			'Logo',
+			array($this, 'settings_field_default_logo_image_render'),
+			'settings',
+			'galleryproplus_settings_section'
+		);
+		
+		add_settings_field(
+			'default_page_background_color',
+			'Page Background Color',
+			array($this, 'settings_field_default_page_background_color_render'),
+			'settings',
+			'galleryproplus_settings_section'
+		);
+		
+		add_settings_field(
+			'default_recipients',
+			'Recipient(s)',
+			array($this, 'settings_field_default_recipients_render'),
 			'settings',
 			'galleryproplus_settings_section'
 		);
 		
 		add_settings_field(
 			'default_slideshow_transition_speed',
-			'Default Slideshow Speed',
+			'Slideshow Speed',
 			array($this, 'settings_field_default_slideshow_transition_speed_render'),
 			'settings',
 			'galleryproplus_settings_section'
@@ -938,16 +1031,16 @@ class GalleryProPlus
 		
 		add_settings_field(
 			'default_slideshow_transition_type',
-			'Default Slideshow Transition',
+			'Slideshow Transition',
 			array($this, 'settings_field_default_slideshow_transition_type_render'),
 			'settings',
 			'galleryproplus_settings_section'
 		);
 		
 		add_settings_field(
-			'default_recipients',
-			'Default Email Recipient(s)',
-			array($this, 'settings_field_default_recipients_render'),
+			'default_theme',
+			'Theme',
+			array($this, 'settings_field_default_theme_render'),
 			'settings',
 			'galleryproplus_settings_section'
 		);
@@ -962,6 +1055,60 @@ class GalleryProPlus
 		?>
 		<input type="text" name="<?php echo GALLERYPROPLUS_TYPE ?>_settings[base_path]" value="<?php echo $settings['base_path'] ?>"><br />
 		<em>Used for generating unique gallery URLs, i.e., /galleries</em>
+		<?php
+	}
+	
+	/*
+	 * @desc Renders `default_header_background_color` setting field.
+	 */
+	public function settings_field_default_header_background_color_render()
+	{
+		$settings = get_option('galleryproplus_settings');
+		?>
+		<input type="text" name="<?php echo GALLERYPROPLUS_TYPE ?>_settings[default_header_background_color]" value="<?php echo $settings['default_header_background_color'] ?>" class="color-picker">
+		<?php
+	}
+	
+	/*
+	 * @desc Renders `default_header_font_color` setting field.
+	 */
+	public function settings_field_default_header_font_color_render()
+	{
+		$settings = get_option('galleryproplus_settings');
+		?>
+		<input type="text" name="<?php echo GALLERYPROPLUS_TYPE ?>_settings[default_header_font_color]" value="<?php echo $settings['default_header_font_color'] ?>" class="color-picker">
+		<?php
+	}
+	
+	/*
+	 * @desc Renders `default_logo_image` setting field.
+	 */
+	public function settings_field_default_logo_image_render()
+	{
+		$settings = get_option('galleryproplus_settings');
+		?>
+		<input type="hidden" id="default_logo_image" name="<?php echo GALLERYPROPLUS_TYPE ?>_settings[default_logo_image]" value="<?php echo $settings['default_logo_image'] ?>" />
+		<div class="image-preview-wrapper" style="display:<?php echo (empty($settings['default_logo_image'])) ? 'none' : 'block' ?>">
+			<img id="image-preview" src="<?php echo (!empty($settings['default_logo_image'])) ? wp_get_attachment_url($settings['default_logo_image']) : '' ?>" alt="" style="max-width:200px;" />
+		</div>
+		<input type="button" id="select_image_button" value="Select..." class="button" style="display:<?php echo (empty($settings['default_logo_image'])) ? 'block' : 'none' ?>" />
+		<input type="button" id="remove_image_button" value="Remove" class="button" style="display:<?php echo (empty($settings['default_logo_image'])) ? 'none' : 'block' ?>" />
+		<script type="text/javascript">
+			window.load = function() {
+				setPostId(<?php echo (!empty($settings['default_logo_image'])) ? $settings['default_logo_image'] : 0 ?>);
+			};
+		</script>
+		<?php
+	}
+	
+	/*
+	 * @desc Renders `default_page_background_color` setting field.
+	 */
+	public function settings_field_default_page_background_color_render()
+	{
+		$settings = get_option('galleryproplus_settings');
+		?>
+		<input type="text" name="<?php echo GALLERYPROPLUS_TYPE ?>_settings[default_page_background_color]" value="<?php echo $settings['default_page_background_color'] ?>" class="color-picker">
 		<?php
 	}
 	

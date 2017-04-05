@@ -23,6 +23,7 @@ register_activation_hook(__FILE__, array($gpp, 'activate'));
 
 if (is_admin())
 {
+	add_action('admin_enqueue_scripts', array($gpp, 'admin_enqueue_scripts'));
 	add_action('admin_head', array($gpp, 'admin_head'));
 	add_action('admin_init', array($gpp, 'admin_init'));
 	add_action('admin_menu', array($gpp, 'admin_menu'));

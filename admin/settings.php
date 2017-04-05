@@ -1,7 +1,6 @@
 <?php defined('ABSPATH') or die('-1') ?>
-
 <div class="wrap">
-	<h1>GP+Gallery Settings</h1>
+	<h1>Gallery Pro Plus Settings</h1>
 	<form action="options.php" method="post">
 		<?php
 			settings_fields('settings');
@@ -10,6 +9,3 @@
 		?>
 	</form>
 </div>
-<!--
-<pre><?php print_r(GalleryProPlusHelper::getDebug()) ?></pre>
--->

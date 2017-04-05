@@ -4,7 +4,7 @@
 <head>
 	<meta charset="utf-8" />
 	<title><?php echo $gallery->post_title ?></title>
-	<link href="<?php echo GALLERYPROPLUS_URL ?>/themes/<?php echo $theme_path ?>/styles.css" rel="stylesheet" type="text/css" />
+	<link href="<?php echo $theme_path ?>/styles.css" rel="stylesheet" type="text/css" />
 	<script src="<?php echo GALLERYPROPLUS_URL ?>/scripts/jquery-1.11.1.min.js"></script>
 	<script src="<?php echo GALLERYPROPLUS_URL ?>/scripts/jquery.cycle2.min.js"></script>
 	<?php if (isset($audio_meta) && isset($audio_path)) { ?>
